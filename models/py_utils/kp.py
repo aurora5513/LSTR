@@ -146,7 +146,7 @@ class kp(nn.Module):
 
         hidden_dim = attn_dim
         self.aux_loss = aux_loss
-        self.position_embedding = build_position_encoding(hidden_dim=hidden_dim, type=pos_type)
+        self.position_embedding = build_position_encoding(hidden_dim=hidden_dim, type=pos_type) # pos_type = 'sine'
         self.query_embed = nn.Embedding(num_queries, hidden_dim)
         self.input_proj = nn.Conv2d(res_dims[-1], hidden_dim, kernel_size=1)  # the same as channel of self.layer4
 
@@ -160,7 +160,7 @@ class kp(nn.Module):
                                              return_intermediate_dec=return_intermediate)
 
         self.class_embed    = nn.Linear(hidden_dim, num_cls)
-        self.specific_embed = MLP(hidden_dim, hidden_dim, lsp_dim - 4, mlp_layers)
+        self.specific_embed = MLP(hidden_dim, hidden_dim, lsp_dim - 4, mlp_layers) # lsp: lane shape parameters
         self.shared_embed   = MLP(hidden_dim, hidden_dim, 4, mlp_layers)
 
     def _make_layer(self, block, planes, blocks, stride=1):
@@ -190,9 +190,11 @@ class kp(nn.Module):
         p = self.layer2(p)  # B 32 45 80
         p = self.layer3(p)  # B 64 23 40
         p = self.layer4(p)  # B 128 12 20
-        pmasks = F.interpolate(masks[:, 0, :, :][None], size=p.shape[-2:]).to(torch.bool)[0]
+        pmasks = F.interpolate(masks[:, 0, :, :][None], size=p.shape[-2:]).to(torch.bool)[0]  # (B, 360, 640) -> (B, 12, 20)
+        # print("pmask shape: ", pmasks.shape)  # ([1, 20, 12])
         pos    = self.position_embedding(p, pmasks)
-        hs, _, weights  = self.transformer(self.input_proj(p), pmasks, self.query_embed.weight, pos)
+        hs, _, weights  = self.transformer(self.input_proj(p), pmasks, self.query_embed.weight, pos)  # forward(self, src, mask, query_embed, pos_embed). type(pos): Tensor
+        # hs.shape: ([N_head, B, embed_dim]) transpose(1, 2)
         output_class    = self.class_embed(hs)
         output_specific = self.specific_embed(hs)
         output_shared   = self.shared_embed(hs)
@@ -240,7 +242,7 @@ class AELoss(nn.Module):
         if aux_loss:
             aux_weight_dict = {}
             for i in range(dec_layers - 1):
-                aux_weight_dict.update({k + f'_{i}': v for k, v in weight_dict.items()})
+                aux_weight_dict.update({k + f'_{i}': v for k, v in weight_dict.items()})  # dict.update() -> 類似於list.append()的作用
             weight_dict.update(aux_weight_dict)
         self.criterion = SetCriterion(num_classes=num_classes,
                                       matcher=matcher,

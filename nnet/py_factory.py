@@ -20,6 +20,7 @@ class Network(nn.Module):
 
         preds, weights = self.model(*xs, **kwargs)
 
+        # Parameters of forward() of AELoss: (self, iteration, save, viz_split, outputs, targets)
         loss  = self.loss(iteration,
                           save,
                           viz_split,

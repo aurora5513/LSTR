@@ -149,7 +149,7 @@ def train(training_dbs, validation_db, start_iter=0, freeze=False):
     with stdout_to_tqdm() as save_stdout:
         for iteration in metric_logger.log_every(tqdm(range(start_iter + 1, max_iteration + 1),
                                                       file=save_stdout, ncols=67),
-                                                 print_freq=10, header=header):
+                                                 print_freq=100, header=header):
 
             training = pinned_training_queue.get(block=True)
             viz_split = 'train'
@@ -217,7 +217,7 @@ if __name__ == "__main__":
 
     threads = args.threads  # 4 every 4 epoch shuffle the indices
     print("using {} threads".format(threads))
-    training_dbs  = [datasets[dataset](configs["db"], train_split) for _ in range(threads)]
+    training_dbs  = [datasets[dataset](configs["db"], train_split) for _ in range(threads)]  # Construct a TUSIMPLE object with arguments of configs["db"] and train_split
     validation_db = datasets[dataset](configs["db"], val_split)
 
     # print("system config...")
